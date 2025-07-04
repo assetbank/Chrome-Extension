@@ -13,6 +13,8 @@ class PopupManager {
         };
 
         this.currentPortalUrl = null;
+        this.currentFilters = null;
+        this.selectedStatusActions = new Set();
 
         this.init();
     }
@@ -93,6 +95,7 @@ class PopupManager {
         this.elements.filtersDetected.style.display = 'block';
         
         this.currentPortalUrl = portalUrl;
+        this.currentFilters = filters;
         this.elements.portalUrl.textContent = portalUrl;
 
         // Generate and display URL
@@ -106,6 +109,16 @@ class PopupManager {
         
         const field = button.dataset.field;
         const value = button.dataset.value;
+        const statusKey = `${field}:${value}`;
+        
+        // Toggle the status action
+        if (this.selectedStatusActions.has(statusKey)) {
+            this.selectedStatusActions.delete(statusKey);
+            button.classList.remove('selected');
+        } else {
+            this.selectedStatusActions.add(statusKey);
+            button.classList.add('selected');
+        }
         
         if (!this.currentPortalUrl) {
             // Try to get current tab's portal URL
@@ -114,18 +127,39 @@ class PopupManager {
                 if (tab && tab.url.includes('.bynder.com')) {
                     const url = new URL(tab.url);
                     this.currentPortalUrl = url.hostname;
-                    this.generateStatusUrl(field, value);
+                    this.updateGeneratedUrl();
                 }
             });
         } else {
-            this.generateStatusUrl(field, value);
+            this.updateGeneratedUrl();
         }
     }
     
-    generateStatusUrl(field, value) {
-        const url = `https://${this.currentPortalUrl}/media/?field=${field}&value=${value}`;
-        this.elements.generatedUrl.value = url;
-        console.log('🔗 Generated status URL:', url);
+    updateGeneratedUrl() {
+        // Start with existing filters if any
+        let baseUrl = '';
+        if (this.currentFilters) {
+            baseUrl = this.generateUrl(this.currentPortalUrl, this.currentFilters);
+        } else {
+            baseUrl = `https://${this.currentPortalUrl}/media/`;
+        }
+        
+        // Parse the base URL to add status filters
+        const urlObj = new URL(baseUrl);
+        
+        // Add each selected status action
+        this.selectedStatusActions.forEach(statusKey => {
+            const [field, value] = statusKey.split(':');
+            // Append status filters to existing URL
+            if (urlObj.search) {
+                urlObj.search += `&field=${field}&value=${value}`;
+            } else {
+                urlObj.search = `?field=${field}&value=${value}`;
+            }
+        });
+        
+        this.elements.generatedUrl.value = urlObj.toString();
+        console.log('🔗 Generated URL with status actions:', urlObj.toString());
     }
 
     generateUrl(portalUrl, filters) {

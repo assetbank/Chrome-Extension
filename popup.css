@@ -183,6 +183,17 @@ body {
     border-color: #0AF;
 }
 
+.btn-status.selected {
+    background-color: #0AF;
+    color: white;
+    border-color: #0AF;
+    opacity: 0.7;
+}
+
+.btn-status.selected:hover {
+    opacity: 0.85;
+}
+
 .filter-section {
     margin-bottom: 15px;
 }
