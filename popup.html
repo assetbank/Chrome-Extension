@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bynder Filter URL Generator</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <img src="bynder-logo-blue.svg" alt="Bynder Logo" class="logo">
+            <h1>Filter URL Generator</h1>
+        </header>
+
+        <main class="content">
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Detecting filters...</p>
+            </div>
+
+            <div id="not-bynder" class="message" style="display: none;">
+                <p>⚠️ This extension only works on Bynder portal pages.</p>
+                <p>Navigate to your Bynder portal and apply some filters.</p>
+            </div>
+
+            <div id="no-filters" class="message" style="display: none;">
+                <p>ℹ️ No active filters detected.</p>
+                <p>Apply filters on the Bynder page and click refresh.</p>
+                <button id="refresh-btn" class="btn btn-primary">Refresh</button>
+            </div>
+
+            <div id="filters-detected" class="results" style="display: none;">
+                <div class="portal-info">
+                    <h3>Portal</h3>
+                    <p id="portal-url"></p>
+                </div>
+
+                <div class="detected-filters">
+                    <h3>Detected Filters</h3>
+                    
+                    <div id="metaproperties-section" class="filter-section" style="display: none;">
+                        <h4>Metaproperties</h4>
+                        <ul id="metaproperties-list"></ul>
+                    </div>
+
+                    <div id="tags-section" class="filter-section" style="display: none;">
+                        <h4>Tags</h4>
+                        <ul id="tags-list"></ul>
+                    </div>
+
+                    <div id="search-section" class="filter-section" style="display: none;">
+                        <h4>Search Terms</h4>
+                        <ul id="search-list"></ul>
+                    </div>
+
+                    <div id="status-section" class="filter-section" style="display: none;">
+                        <h4>Status Filters</h4>
+                        <ul id="status-list"></ul>
+                    </div>
+                </div>
+
+                <div class="url-output">
+                    <h3>Generated URL</h3>
+                    <div class="url-container">
+                        <input type="text" id="generated-url" readonly>
+                        <button id="copy-btn" class="btn btn-copy" title="Copy to clipboard">
+                            <span class="copy-icon">📋</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="refresh-filters" class="btn btn-secondary">Refresh Filters</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Bynder Filter URL Generator",
+  "version": "1.0.0",
+  "description": "Generate shareable URLs from applied Bynder filters using network interception",
+
+  "permissions": [
+    "activeTab",
+    "storage",
+    "webRequest"
+  ],
+
+  "host_permissions": [
+    "*://*.bynder.com/*"
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Generate Bynder Filter URL"
+  },
+
+  "background": {
+    "service_worker": "background.js"
+  }
+}
