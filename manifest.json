@@ -15,20 +15,20 @@
   ],
 
   "icons": {
-    "16": "icons/funnel-16.svg",
-    "32": "icons/funnel-32.svg",
-    "48": "icons/funnel-48.svg",
-    "128": "icons/funnel-128.svg"
+    "16": "icons/funnel-16.png",
+    "32": "icons/funnel-32.png",
+    "48": "icons/funnel-48.png",
+    "128": "icons/funnel-128.png"
   },
 
   "action": {
     "default_popup": "popup.html",
     "default_title": "Generate Bynder Filter URL",
     "default_icon": {
-      "16": "icons/funnel-16.svg",
-      "32": "icons/funnel-32.svg",
-      "48": "icons/funnel-48.svg",
-      "128": "icons/funnel-128.svg"
+      "16": "icons/funnel-16.png",
+      "32": "icons/funnel-32.png",
+      "48": "icons/funnel-48.png",
+      "128": "icons/funnel-128.png"
     }
   },
 
