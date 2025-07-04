@@ -36,27 +36,17 @@
                     <p id="portal-url"></p>
                 </div>
 
-                <div class="detected-filters">
-                    <h3>Detected Filters</h3>
-                    
-                    <div id="metaproperties-section" class="filter-section" style="display: none;">
-                        <h4>Metaproperties</h4>
-                        <ul id="metaproperties-list"></ul>
-                    </div>
-
-                    <div id="tags-section" class="filter-section" style="display: none;">
-                        <h4>Tags</h4>
-                        <ul id="tags-list"></ul>
-                    </div>
-
-                    <div id="search-section" class="filter-section" style="display: none;">
-                        <h4>Search Terms</h4>
-                        <ul id="search-list"></ul>
-                    </div>
-
-                    <div id="status-section" class="filter-section" style="display: none;">
-                        <h4>Status Filters</h4>
-                        <ul id="status-list"></ul>
+                <div class="status-actions">
+                    <h3>Status Actions</h3>
+                    <div class="status-buttons">
+                        <button class="btn btn-status" data-field="isActive" data-value="true" title="Show only active assets">Active Assets</button>
+                        <button class="btn btn-status" data-field="archive" data-value="1" title="Show only archived assets">Archived</button>
+                        <button class="btn btn-status" data-field="isPublic" data-value="1" title="Show only public assets">Public</button>
+                        <button class="btn btn-status" data-field="isDownloadable" data-value="true" title="Show downloadable assets">Downloadable</button>
+                        <button class="btn btn-status" data-field="isDownloadable" data-value="false" title="Show non-downloadable assets">Non-Downloadable</button>
+                        <button class="btn btn-status" data-field="keyVisual" data-value="1" title="Show limited usage assets">Limited Usage</button>
+                        <button class="btn btn-status" data-field="audit" data-value="1" title="Show assets sent for review">Sent for Review</button>
+                        <button class="btn btn-status" data-field="watermark" data-value="1" title="Show watermarked assets">Watermarked</button>
                     </div>
                 </div>
 

@@ -142,15 +142,45 @@ body {
     word-break: break-all;
 }
 
-.detected-filters {
+.status-actions {
     margin-bottom: 20px;
 }
 
-.detected-filters h3 {
+.status-actions h3 {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 15px;
     color: #031026;
+}
+
+.status-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.btn-status {
+    background-color: #F9F9FA;
+    color: #3C4858;
+    border: 1px solid #E0E4EA;
+    padding: 10px 12px;
+    font-size: 13px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn-status:hover {
+    background-color: #E3F2FD;
+    border-color: #0AF;
+    color: #0066B3;
+}
+
+.btn-status:active {
+    background-color: #0AF;
+    color: white;
+    border-color: #0AF;
 }
 
 .filter-section {

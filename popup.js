@@ -12,24 +12,7 @@ class PopupManager {
             refreshFilters: document.getElementById('refresh-filters')
         };
 
-        this.filterSections = {
-            metaproperties: {
-                section: document.getElementById('metaproperties-section'),
-                list: document.getElementById('metaproperties-list')
-            },
-            tags: {
-                section: document.getElementById('tags-section'),
-                list: document.getElementById('tags-list')
-            },
-            search: {
-                section: document.getElementById('search-section'),
-                list: document.getElementById('search-list')
-            },
-            status: {
-                section: document.getElementById('status-section'),
-                list: document.getElementById('status-list')
-            }
-        };
+        this.currentPortalUrl = null;
 
         this.init();
     }
@@ -43,6 +26,11 @@ class PopupManager {
         this.elements.copyBtn.addEventListener('click', () => this.copyToClipboard());
         this.elements.refreshBtn.addEventListener('click', () => this.detectFilters());
         this.elements.refreshFilters.addEventListener('click', () => this.detectFilters());
+        
+        // Setup status button click handlers
+        document.querySelectorAll('.btn-status').forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleStatusClick(e));
+        });
     }
 
     async detectFilters() {
@@ -104,42 +92,40 @@ class PopupManager {
         this.hideAllSections();
         this.elements.filtersDetected.style.display = 'block';
         
+        this.currentPortalUrl = portalUrl;
         this.elements.portalUrl.textContent = portalUrl;
-
-        // Clear previous displays
-        Object.values(this.filterSections).forEach(section => {
-            section.section.style.display = 'none';
-            section.list.innerHTML = '';
-        });
-
-        // Display each filter type
-        this.displayFilterSection('metaproperties', filters.metaproperties);
-        this.displayFilterSection('tags', filters.tags);
-        this.displayFilterSection('search', filters.search);
-        this.displayFilterSection('status', filters.status);
 
         // Generate and display URL
         const generatedUrl = this.generateUrl(portalUrl, filters);
         this.elements.generatedUrl.value = generatedUrl;
     }
 
-    displayFilterSection(type, filterData) {
-        if (!filterData || filterData.length === 0) return;
-
-        const section = this.filterSections[type];
-        section.section.style.display = 'block';
-
-        filterData.forEach(filter => {
-            const li = document.createElement('li');
-            
-            if (type === 'metaproperties') {
-                li.textContent = `${filter.property}: ${filter.value}`;
-            } else {
-                li.textContent = filter.value || filter;
-            }
-            
-            section.list.appendChild(li);
-        });
+    handleStatusClick(event) {
+        const button = event.target.closest('.btn-status');
+        if (!button) return;
+        
+        const field = button.dataset.field;
+        const value = button.dataset.value;
+        
+        if (!this.currentPortalUrl) {
+            // Try to get current tab's portal URL
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                const tab = tabs[0];
+                if (tab && tab.url.includes('.bynder.com')) {
+                    const url = new URL(tab.url);
+                    this.currentPortalUrl = url.hostname;
+                    this.generateStatusUrl(field, value);
+                }
+            });
+        } else {
+            this.generateStatusUrl(field, value);
+        }
+    }
+    
+    generateStatusUrl(field, value) {
+        const url = `https://${this.currentPortalUrl}/media/?field=${field}&value=${value}`;
+        this.elements.generatedUrl.value = url;
+        console.log('🔗 Generated status URL:', url);
     }
 
     generateUrl(portalUrl, filters) {
