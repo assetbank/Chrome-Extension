@@ -23,15 +23,16 @@ body {
 
 .header {
     background-color: #002332;
-    padding: 15px 20px;
+    padding: 20px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
 }
 
 .logo {
-    width: 24px;
-    height: 24px;
+    width: 200px;
+    height: auto;
 }
 
 .header h1 {
