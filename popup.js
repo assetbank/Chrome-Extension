@@ -8,8 +8,7 @@ class PopupManager {
             portalUrl: document.getElementById('portal-url'),
             generatedUrl: document.getElementById('generated-url'),
             copyBtn: document.getElementById('copy-btn'),
-            refreshBtn: document.getElementById('refresh-btn'),
-            refreshFilters: document.getElementById('refresh-filters')
+            refreshBtn: document.getElementById('refresh-btn')
         };
 
         this.currentPortalUrl = null;
@@ -27,7 +26,6 @@ class PopupManager {
     setupEventListeners() {
         this.elements.copyBtn.addEventListener('click', () => this.copyToClipboard());
         this.elements.refreshBtn.addEventListener('click', () => this.detectFilters());
-        this.elements.refreshFilters.addEventListener('click', () => this.detectFilters());
         
         // Setup status button click handlers
         document.querySelectorAll('.btn-status').forEach(btn => {
