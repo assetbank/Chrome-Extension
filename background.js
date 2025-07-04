@@ -5,10 +5,58 @@ class NetworkInterceptor {
         this.init();
     }
 
-    init() {
+    async init() {
         console.log('🚀 Bynder Network Interceptor loading...');
+        await this.loadSavedFilters(); // Load persisted filter data
         this.setupNetworkInterception();
         this.setupMessageHandler();
+        this.setupTabCleanup();
+    }
+
+    async loadSavedFilters() {
+        try {
+            const result = await chrome.storage.local.get(['filterState']);
+            if (result.filterState) {
+                // Convert the saved object back to a Map
+                const savedState = result.filterState;
+                for (const [tabId, tabData] of Object.entries(savedState)) {
+                    // Convert activeFilters array back to Map
+                    const activeFiltersMap = new Map();
+                    if (tabData.activeFilters && Array.isArray(tabData.activeFilters)) {
+                        for (const [key, value] of tabData.activeFilters) {
+                            activeFiltersMap.set(key, value);
+                        }
+                    }
+                    
+                    this.filterState.set(parseInt(tabId), {
+                        ...tabData,
+                        activeFilters: activeFiltersMap
+                    });
+                }
+                console.log('📥 Loaded saved filter state:', this.filterState.size, 'tabs');
+            }
+        } catch (error) {
+            console.error('❌ Error loading saved filters:', error);
+        }
+    }
+
+    async saveFilterState() {
+        try {
+            // Convert Map to a serializable object
+            const stateToSave = {};
+            for (const [tabId, tabData] of this.filterState.entries()) {
+                stateToSave[tabId] = {
+                    ...tabData,
+                    // Convert the Map to an array for serialization
+                    activeFilters: Array.from(tabData.activeFilters.entries())
+                };
+            }
+            
+            await chrome.storage.local.set({ filterState: stateToSave });
+            console.log('💾 Filter state saved to storage');
+        } catch (error) {
+            console.error('❌ Error saving filter state:', error);
+        }
     }
 
     setupNetworkInterception() {
@@ -153,6 +201,9 @@ class NetworkInterceptor {
                 activeFilters: Array.from(tabState.activeFilters.entries())
             });
 
+            // Save the updated filter state to persistent storage
+            this.saveFilterState();
+
         } catch (error) {
             console.error('❌ Error parsing filter:', error);
         }
@@ -202,6 +253,35 @@ class NetworkInterceptor {
         });
         
         return hasFilters;
+    }
+
+    setupTabCleanup() {
+        // Clean up filter data when tabs are closed
+        chrome.tabs.onRemoved.addListener(async (tabId) => {
+            if (this.filterState.has(tabId)) {
+                console.log(`🧹 Cleaning up filter data for closed tab ${tabId}`);
+                this.filterState.delete(tabId);
+                await this.saveFilterState();
+            }
+        });
+
+        // Also clean up old data on startup (tabs that might have been closed while extension was inactive)
+        chrome.tabs.query({}, (tabs) => {
+            const activeTabIds = new Set(tabs.map(tab => tab.id));
+            let cleanedAny = false;
+            
+            for (const tabId of this.filterState.keys()) {
+                if (!activeTabIds.has(tabId)) {
+                    console.log(`🧹 Cleaning up stale filter data for non-existent tab ${tabId}`);
+                    this.filterState.delete(tabId);
+                    cleanedAny = true;
+                }
+            }
+            
+            if (cleanedAny) {
+                this.saveFilterState();
+            }
+        });
     }
 }
 
