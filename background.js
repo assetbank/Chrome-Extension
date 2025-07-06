@@ -6,7 +6,6 @@ class NetworkInterceptor {
     }
 
     async init() {
-        console.log('🚀 Bynder Network Interceptor loading...');
         await this.loadSavedFilters(); // Load persisted filter data
         this.setupNetworkInterception();
         this.setupMessageHandler();
@@ -33,7 +32,6 @@ class NetworkInterceptor {
                         activeFilters: activeFiltersMap
                     });
                 }
-                console.log('📥 Loaded saved filter state:', this.filterState.size, 'tabs');
             }
         } catch (error) {
             console.error('❌ Error loading saved filters:', error);
@@ -53,34 +51,41 @@ class NetworkInterceptor {
             }
             
             await chrome.storage.local.set({ filterState: stateToSave });
-            console.log('💾 Filter state saved to storage');
         } catch (error) {
             console.error('❌ Error saving filter state:', error);
         }
     }
 
     setupNetworkInterception() {
-        console.log('🌐 Setting up network interception...');
-        
         chrome.webRequest.onBeforeRequest.addListener(
             (details) => {
+                // Add back essential logging for debugging search issues
+                if (details.url.includes('/search/assets/')) {
+                    console.log('🔍 Search request:', details.url);
+                }
+                
                 if (this.isBynderFilterRequest(details.url)) {
-                    console.log('✅ Bynder filter request intercepted:', details.url);
+                    console.log('✅ Filter request intercepted:', details.url);
                     this.parseFilterRequest(details.url, details.tabId);
+                } else if (details.url.includes('/search/assets/') && details.url.includes('field=')) {
+                    console.log('⚠️ Missed filter request:', details.url);
+                    console.log('🔍 Detection check:', {
+                        hasMetaproperty: details.url.includes('field=metaproperty_'),
+                        hasTags: details.url.includes('field=tags'),
+                        hasText: details.url.includes('field=text'),
+                        hasSingletext: details.url.includes('field=singletext')
+                    });
                 }
             },
             {
                 urls: ['*://*.bynder.com/*']
             }
         );
-        
-        console.log('💾 Network interception setup complete');
     }
 
     setupMessageHandler() {
         chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             if (request.action === 'getFilters') {
-                console.log('📋 Getting filters request from popup');
                 
                 // Get current active tab to compare with stored data
                 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -89,21 +94,10 @@ class NetworkInterceptor {
                     const tabId = activeTab?.id;
                     const tabFilterState = this.filterState.get(tabId);
                     
-                    console.log('🔍 Checking filter data:', {
-                        hasData: !!tabFilterState,
-                        activeTabId: tabId,
-                        timestamp: tabFilterState?.timestamp,
-                        age: tabFilterState ? Date.now() - tabFilterState.timestamp : 'no data'
-                    });
                     
                     if (tabFilterState && tabId) {
                         const activeFilters = this.getActiveFilters(tabFilterState);
                         
-                        console.log('📊 Returning current filter state:', JSON.stringify({
-                            filters: activeFilters,
-                            portalUrl: tabFilterState.portalUrl,
-                            hasFilters: this.hasFilters(activeFilters)
-                        }, null, 2));
                         
                         sendResponse({
                             filters: activeFilters,
@@ -112,10 +106,21 @@ class NetworkInterceptor {
                             source: 'state-tracked'
                         });
                     } else {
-                        console.log('⚠️ No filter state available for tab');
+                        
+                        // Still try to get portal URL from current tab
+                        let portalUrl = null;
+                        if (activeTab && activeTab.url && activeTab.url.includes('.bynder.com')) {
+                            try {
+                                const url = new URL(activeTab.url);
+                                portalUrl = url.hostname;
+                            } catch (e) {
+                                console.error('Error parsing URL:', e);
+                            }
+                        }
+                        
                         sendResponse({
                             filters: { metaproperties: [], tags: [], search: [], status: [] },
-                            portalUrl: null,
+                            portalUrl: portalUrl,
                             hasFilters: false,
                             source: 'no-data'
                         });
@@ -127,10 +132,26 @@ class NetworkInterceptor {
     }
 
     isBynderFilterRequest(url) {
-        return url.includes('/search/assets/') && 
-               (url.includes('field=metaproperty_') || 
-                url.includes('field=tags') || 
-                url.includes('field=text'));
+        // Check for filter requests
+        if (url.includes('/search/assets/') && 
+            (url.includes('field=metaproperty_') || 
+             url.includes('field=tags') || 
+             url.includes('field=text') ||
+             url.includes('field=singletext'))) {
+            return true;
+        }
+        
+        // Also check for reset/clear requests (case insensitive)
+        const lowerUrl = url.toLowerCase();
+        if (url.includes('/search/assets/') && 
+            (lowerUrl.includes('resetsearch') || 
+             url.includes('resetSearch') ||
+             url.includes('clearfilters') ||
+             url.includes('reset=true'))) {
+            return true;
+        }
+        
+        return false;
     }
 
     parseFilterRequest(url, tabId) {
@@ -138,14 +159,33 @@ class NetworkInterceptor {
             const urlObj = new URL(url);
             const params = urlObj.searchParams;
             
-            console.log('🔍 Parsing:', Array.from(params.entries()));
+            console.log('🔍 Parsing filter request:', Array.from(params.entries()));
+            
+            // Check for reset/clear all filters (handle both resetSearch and resetsearch)
+            if (params.has('resetSearch') || 
+                params.has('resetsearch') ||
+                url.toLowerCase().includes('resetsearch') || 
+                url.includes('clearfilters') || 
+                params.get('reset') === 'true') {
+                
+                // Clear all filters for this tab
+                if (this.filterState.has(tabId)) {
+                    const tabState = this.filterState.get(tabId);
+                    tabState.activeFilters.clear();
+                    tabState.timestamp = Date.now();
+                    this.saveFilterState();
+                }
+                return;
+            }
 
             const field = params.get('field');
             const value = params.get('value');
             const filterType = params.get('filterType');
 
+            console.log('🔍 Extracted params:', { field, value, filterType });
+
             if (!field || !value || !filterType) {
-                console.log('⏭️ Skipping incomplete filter request');
+                console.log('❌ Missing required params - skipping');
                 return;
             }
 
@@ -181,7 +221,7 @@ class NetworkInterceptor {
                         type: 'tag',
                         value: value
                     };
-                } else if (field === 'text') {
+                } else if (field === 'text' || field === 'singletext') {
                     filterData = {
                         type: 'search',
                         value: value
@@ -191,15 +231,13 @@ class NetworkInterceptor {
                 tabState.activeFilters.set(filterKey, filterData);
                 
             } else if (filterType === 'remove') {
-                console.log(`➖ Removing filter: ${filterKey}`);
                 tabState.activeFilters.delete(filterKey);
+                
+                // If no filters remain, clear the timestamp to indicate empty state
+                if (tabState.activeFilters.size === 0) {
+                    tabState.timestamp = Date.now();
+                }
             }
-
-            console.log('✅ Filter state updated:', {
-                tabId,
-                activeFilterCount: tabState.activeFilters.size,
-                activeFilters: Array.from(tabState.activeFilters.entries())
-            });
 
             // Save the updated filter state to persistent storage
             this.saveFilterState();
@@ -216,6 +254,7 @@ class NetworkInterceptor {
             search: [],
             status: []
         };
+
 
         for (const [filterKey, filterData] of tabState.activeFilters) {
             switch (filterData.type) {
@@ -235,6 +274,7 @@ class NetworkInterceptor {
             }
         }
 
+
         return filters;
     }
 
@@ -244,13 +284,6 @@ class NetworkInterceptor {
                filters.search.length > 0 ||
                filters.status.length > 0;
         
-        console.log('🔍 hasFilters check:', {
-            metaproperties: filters.metaproperties.length,
-            tags: filters.tags.length,
-            search: filters.search.length,
-            status: filters.status.length,
-            result: hasFilters
-        });
         
         return hasFilters;
     }
@@ -259,9 +292,45 @@ class NetworkInterceptor {
         // Clean up filter data when tabs are closed
         chrome.tabs.onRemoved.addListener(async (tabId) => {
             if (this.filterState.has(tabId)) {
-                console.log(`🧹 Cleaning up filter data for closed tab ${tabId}`);
                 this.filterState.delete(tabId);
                 await this.saveFilterState();
+            }
+        });
+
+        // Monitor tab updates for navigation changes
+        chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+            if (changeInfo.url && tab.url.includes('.bynder.com')) {
+                const url = new URL(tab.url);
+                const searchParams = new URLSearchParams(url.search);
+                
+                // Skip if this navigation happened very recently after adding a filter
+                // (Bynder sometimes redirects after applying filters)
+                const tabState = this.filterState.get(tabId);
+                if (tabState) {
+                    const timeSinceLastUpdate = Date.now() - tabState.timestamp;
+                    if (timeSinceLastUpdate < 5000) { // 5 second grace period
+                        return;
+                    }
+                }
+                
+                // Check if navigating to a URL without filters
+                // Only viewType=grid or similar UI params, no actual filters
+                const hasOnlyViewParams = url.search && 
+                    searchParams.has('viewType') && 
+                    !searchParams.has('field') && 
+                    !searchParams.has('metaproperty') &&
+                    !searchParams.has('tags') &&
+                    !searchParams.has('text');
+                
+                if ((url.pathname === '/' || url.pathname === '/media/' || url.pathname === '/media') && 
+                    (!url.search || hasOnlyViewParams)) {
+                    
+                    // Only clear if we actually have no filters in the tab state
+                    if (this.filterState.has(tabId) && tabState.activeFilters.size === 0) {
+                        tabState.timestamp = Date.now();
+                        this.saveFilterState();
+                    }
+                }
             }
         });
 
@@ -272,7 +341,6 @@ class NetworkInterceptor {
             
             for (const tabId of this.filterState.keys()) {
                 if (!activeTabIds.has(tabId)) {
-                    console.log(`🧹 Cleaning up stale filter data for non-existent tab ${tabId}`);
                     this.filterState.delete(tabId);
                     cleanedAny = true;
                 }

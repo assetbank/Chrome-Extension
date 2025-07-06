@@ -3,12 +3,13 @@ class PopupManager {
         this.elements = {
             loading: document.getElementById('loading'),
             notBynder: document.getElementById('not-bynder'),
-            noFilters: document.getElementById('no-filters'),
             filtersDetected: document.getElementById('filters-detected'),
             portalUrl: document.getElementById('portal-url'),
+            filterCount: document.getElementById('filter-count'),
             generatedUrl: document.getElementById('generated-url'),
+            openBtn: document.getElementById('open-btn'),
             copyBtn: document.getElementById('copy-btn'),
-            refreshBtn: document.getElementById('refresh-btn')
+            clearStatusBtn: document.getElementById('clear-status-btn')
         };
 
         this.currentPortalUrl = null;
@@ -18,14 +19,16 @@ class PopupManager {
         this.init();
     }
 
-    init() {
+    async init() {
         this.setupEventListeners();
+        await this.loadSavedStatusActions();
         this.detectFilters();
     }
 
     setupEventListeners() {
         this.elements.copyBtn.addEventListener('click', () => this.copyToClipboard());
-        this.elements.refreshBtn.addEventListener('click', () => this.detectFilters());
+        this.elements.openBtn.addEventListener('click', () => this.openUrl());
+        this.elements.clearStatusBtn.addEventListener('click', () => this.clearAllStatusActions());
         
         // Setup status button click handlers
         document.querySelectorAll('.btn-status').forEach(btn => {
@@ -34,7 +37,6 @@ class PopupManager {
     }
 
     async detectFilters() {
-        console.log('📋 Starting filter detection...');
         this.showLoading();
 
         try {
@@ -48,16 +50,12 @@ class PopupManager {
             // Request filter data from background script
             const results = await chrome.runtime.sendMessage({ action: 'getFilters' });
             
-            console.log('📊 Results from background:', results);
-            console.log('📊 Has filters check:', results?.hasFilters);
-            console.log('📊 Filters data:', results?.filters);
-            
-            if (results && results.hasFilters) {
-                console.log('✅ Displaying filters');
-                this.displayFilters(results.filters, results.portalUrl);
+            // Always show the main UI if we have a portal URL
+            if (results && results.portalUrl) {
+                const filters = results.filters || { metaproperties: [], tags: [], search: [], status: [] };
+                this.displayFilters(filters, results.portalUrl);
             } else {
-                console.log('❌ No filters to display');
-                this.showNoFilters();
+                this.showNotBynder();
             }
         } catch (error) {
             console.error('❌ Error detecting filters:', error);
@@ -75,20 +73,13 @@ class PopupManager {
         this.elements.notBynder.style.display = 'block';
     }
 
-    showNoFilters() {
-        this.hideAllSections();
-        this.elements.noFilters.style.display = 'block';
-    }
-
     hideAllSections() {
         this.elements.loading.style.display = 'none';
         this.elements.notBynder.style.display = 'none';
-        this.elements.noFilters.style.display = 'none';
         this.elements.filtersDetected.style.display = 'none';
     }
 
     displayFilters(filters, portalUrl) {
-        console.log('📺 Displaying filters:', filters);
         this.hideAllSections();
         this.elements.filtersDetected.style.display = 'block';
         
@@ -96,9 +87,22 @@ class PopupManager {
         this.currentFilters = filters;
         this.elements.portalUrl.textContent = portalUrl;
 
-        // Generate and display URL
-        const generatedUrl = this.generateUrl(portalUrl, filters);
-        this.elements.generatedUrl.value = generatedUrl;
+        // Update filter count display
+        this.updateFilterCount(filters);
+
+        // Check if we have any active filters (not counting selected status actions)
+        const hasActiveFilters = (filters.metaproperties && filters.metaproperties.length > 0) ||
+                                (filters.tags && filters.tags.length > 0) ||
+                                (filters.search && filters.search.length > 0);
+
+        if (!hasActiveFilters && this.selectedStatusActions.size === 0) {
+            // No filters active, show base URL without parameters
+            this.elements.generatedUrl.value = `https://${portalUrl}/media/`;
+        } else {
+            // Generate and display URL with filters
+            const generatedUrl = this.generateUrl(portalUrl, filters);
+            this.elements.generatedUrl.value = generatedUrl;
+        }
     }
 
     handleStatusClick(event) {
@@ -131,79 +135,185 @@ class PopupManager {
         } else {
             this.updateGeneratedUrl();
         }
+        
+        // Update filter count display when status actions change
+        this.updateFilterCount(this.currentFilters);
+        
+        // Save status actions to storage
+        this.saveStatusActions();
+    }
+
+    clearAllStatusActions() {
+        
+        // Clear the set
+        this.selectedStatusActions.clear();
+        
+        // Remove selected styling from all buttons
+        document.querySelectorAll('.btn-status.selected').forEach(btn => {
+            btn.classList.remove('selected');
+        });
+        
+        // Update URL and filter count
+        this.updateGeneratedUrl();
+        this.updateFilterCount(this.currentFilters);
+        
+        // Save to storage
+        this.saveStatusActions();
     }
     
     updateGeneratedUrl() {
-        // Start with existing filters if any
-        let baseUrl = '';
-        if (this.currentFilters) {
-            baseUrl = this.generateUrl(this.currentPortalUrl, this.currentFilters);
+        // Check if we have any active filters
+        const hasActiveFilters = this.currentFilters && (
+            (this.currentFilters.metaproperties && this.currentFilters.metaproperties.length > 0) ||
+            (this.currentFilters.tags && this.currentFilters.tags.length > 0) ||
+            (this.currentFilters.search && this.currentFilters.search.length > 0)
+        );
+
+        // Start with base URL
+        let baseUrl = `https://${this.currentPortalUrl}/media/`;
+        
+        // Only add filter parameters if we have filters or status actions
+        if (hasActiveFilters || this.selectedStatusActions.size > 0) {
+            if (hasActiveFilters) {
+                baseUrl = this.generateUrl(this.currentPortalUrl, this.currentFilters);
+            }
+            
+            // Parse the base URL to add status filters
+            const urlObj = new URL(baseUrl);
+            
+            // If we only have status actions (no other filters), ensure we start with resetsearch
+            if (!hasActiveFilters && this.selectedStatusActions.size > 0) {
+                // Status actions only - start fresh with resetsearch
+                const statusParams = [];
+                this.selectedStatusActions.forEach(statusKey => {
+                    const [field, value] = statusKey.split(':');
+                    statusParams.push(`field=${field}&value=${value}&filterType=add`);
+                });
+                urlObj.search = `?resetsearch&${statusParams.join('&')}`;
+            } else {
+                // Add status actions to existing filter URL
+                this.selectedStatusActions.forEach(statusKey => {
+                    const [field, value] = statusKey.split(':');
+                    urlObj.search += `&field=${field}&value=${value}&filterType=add`;
+                });
+            }
+            
+            this.elements.generatedUrl.value = urlObj.toString();
         } else {
-            baseUrl = `https://${this.currentPortalUrl}/media/`;
+            // No filters at all - just show base URL
+            this.elements.generatedUrl.value = baseUrl;
         }
         
-        // Parse the base URL to add status filters
-        const urlObj = new URL(baseUrl);
+    }
+
+    updateFilterCount(filters) {
+        if (!filters) {
+            this.elements.filterCount.textContent = 'No filters active';
+            return;
+        }
+
+        const filterCount = (filters.metaproperties?.length || 0) + (filters.tags?.length || 0);
+        const keywordCount = filters.search?.length || 0;
+        const statusActionCount = this.selectedStatusActions.size;
         
-        // Add each selected status action
-        this.selectedStatusActions.forEach(statusKey => {
-            const [field, value] = statusKey.split(':');
-            // Append status filters to existing URL
-            if (urlObj.search) {
-                urlObj.search += `&field=${field}&value=${value}`;
-            } else {
-                urlObj.search = `?field=${field}&value=${value}`;
+        const totalCount = filterCount + keywordCount + statusActionCount;
+        
+        if (totalCount === 0) {
+            this.elements.filterCount.textContent = 'No filters active';
+            return;
+        }
+        
+        const parts = [];
+        
+        if (filterCount > 0) {
+            parts.push(`${filterCount} filter${filterCount === 1 ? '' : 's'}`);
+        }
+        
+        if (keywordCount > 0) {
+            parts.push(`${keywordCount} keyword${keywordCount === 1 ? '' : 's'}`);
+        }
+        
+        if (statusActionCount > 0) {
+            parts.push(`${statusActionCount} status action${statusActionCount === 1 ? '' : 's'}`);
+        }
+        
+        this.elements.filterCount.textContent = parts.join(' + ');
+    }
+
+    async loadSavedStatusActions() {
+        try {
+            const result = await chrome.storage.local.get(['selectedStatusActions']);
+            if (result.selectedStatusActions) {
+                this.selectedStatusActions = new Set(result.selectedStatusActions);
+                
+                // Update UI to show selected buttons
+                this.selectedStatusActions.forEach(statusKey => {
+                    const [field, value] = statusKey.split(':');
+                    const button = document.querySelector(`[data-field="${field}"][data-value="${value}"]`);
+                    if (button) {
+                        button.classList.add('selected');
+                    }
+                });
             }
-        });
-        
-        this.elements.generatedUrl.value = urlObj.toString();
-        console.log('🔗 Generated URL with status actions:', urlObj.toString());
+        } catch (error) {
+            console.error('❌ Error loading status actions:', error);
+        }
+    }
+
+    async saveStatusActions() {
+        try {
+            await chrome.storage.local.set({
+                selectedStatusActions: Array.from(this.selectedStatusActions)
+            });
+        } catch (error) {
+            console.error('❌ Error saving status actions:', error);
+        }
     }
 
     generateUrl(portalUrl, filters) {
         const params = [];
-        let hasMetaproperties = false;
+        let hasFilters = false;
 
-        // Add metaproperties
+        // Add ALL metaproperties
         if (filters.metaproperties && filters.metaproperties.length > 0) {
-            hasMetaproperties = true;
-            const meta = filters.metaproperties[0]; // Take first metaproperty
-            const field = meta.rawProperty || meta.property;
-            params.push(`field=metaproperty_${field}&value=${meta.value}&filterType=add`);
+            hasFilters = true;
+            filters.metaproperties.forEach(meta => {
+                const field = meta.rawProperty || meta.property;
+                params.push(`field=metaproperty_${field}&value=${meta.value}&filterType=add`);
+            });
         }
 
-        // Add other filters (tags, search)
+        // Add ALL tags
         if (filters.tags && filters.tags.length > 0) {
-            const tag = filters.tags[0]; // Take first tag
-            params.push(`field=tags&value=${tag.value}&filterType=add`);
+            hasFilters = true;
+            filters.tags.forEach(tag => {
+                params.push(`field=tags&value=${tag.value}&filterType=add`);
+            });
         }
 
+        // Add ALL search terms
         if (filters.search && filters.search.length > 0) {
-            const search = filters.search[0]; // Take first search term
-            params.push(`field=text&value=${search.value}&filterType=add`);
+            hasFilters = true;
+            filters.search.forEach(search => {
+                params.push(`field=text&value=${search.value}&filterType=add`);
+            });
         }
 
-        // Choose endpoint and construct URL according to project format
-        if (hasMetaproperties) {
-            const meta = filters.metaproperties[0];
-            const field = meta.rawProperty || meta.property;
-            const generatedUrl = `https://${portalUrl}/search/set/?resetsearch&field=metaproperty_${field}&value=${meta.value}&filterType=add`;
-            console.log('🔗 Generated URL:', generatedUrl);
+        // Construct URL with all filters
+        if (hasFilters && params.length > 0) {
+            // Determine endpoint based on filter types
+            const hasMetaproperties = filters.metaproperties && filters.metaproperties.length > 0;
+            const endpoint = hasMetaproperties ? '/search/set/' : '/search/media/';
+            
+            // Join all parameters
+            const queryString = params.join('&');
+            const generatedUrl = `https://${portalUrl}${endpoint}?resetsearch&${queryString}`;
+            
             return generatedUrl;
         } else {
-            // For non-metaproperty filters, use /search/media/ endpoint
-            let field, value;
-            if (filters.tags && filters.tags.length > 0) {
-                field = 'tags';
-                value = filters.tags[0].value;
-            } else if (filters.search && filters.search.length > 0) {
-                field = 'text';
-                value = filters.search[0].value;
-            }
-            
-            const generatedUrl = `https://${portalUrl}/search/media/?resetsearch&field=${field}&value=${value}&filterType=add`;
-            console.log('🔗 Generated URL:', generatedUrl);
-            return generatedUrl;
+            // No filters, return base URL
+            const baseUrl = `https://${portalUrl}/media/`;
+            return baseUrl;
         }
     }
 
@@ -213,6 +323,13 @@ class PopupManager {
 
     sanitizeValue(value) {
         return value.replace(/[^a-zA-Z0-9-]/g, "_");
+    }
+
+    openUrl() {
+        const url = this.elements.generatedUrl.value;
+        if (url) {
+            chrome.tabs.create({ url: url });
+        }
     }
 
     async copyToClipboard() {

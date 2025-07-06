@@ -21,13 +21,7 @@
 
             <div id="not-bynder" class="message" style="display: none;">
                 <p>⚠️ This extension only works on Bynder portal pages.</p>
-                <p>Navigate to your Bynder portal and apply some filters.</p>
-            </div>
-
-            <div id="no-filters" class="message" style="display: none;">
-                <p>ℹ️ No active filters detected.</p>
-                <p>Apply filters on the Bynder page and click refresh.</p>
-                <button id="refresh-btn" class="btn btn-primary">Refresh</button>
+                <p>Navigate to your Bynder portal to use this extension.</p>
             </div>
 
             <div id="filters-detected" class="results" style="display: none;">
@@ -37,7 +31,10 @@
                 </div>
 
                 <div class="status-actions">
-                    <h3>Status Actions</h3>
+                    <div class="status-header">
+                        <h3>Status Actions</h3>
+                        <button id="clear-status-btn" class="btn btn-clear" title="Clear all status actions">Clear All</button>
+                    </div>
                     <div class="status-buttons">
                         <button class="btn btn-status" data-field="isActive" data-value="true" title="Show only active assets">Active Assets</button>
                         <button class="btn btn-status" data-field="archive" data-value="1" title="Show only archived assets">Archived</button>
@@ -51,9 +48,15 @@
                 </div>
 
                 <div class="url-output">
-                    <h3>Generated URL</h3>
+                    <div class="url-header">
+                        <h3>Generated URL</h3>
+                        <span id="filter-count" class="filter-count"></span>
+                    </div>
                     <div class="url-container">
                         <input type="text" id="generated-url" readonly>
+                        <button id="open-btn" class="btn btn-copy" title="Open in new tab">
+                            <span class="open-icon">🔗</span>
+                        </button>
                         <button id="copy-btn" class="btn btn-copy" title="Copy to clipboard">
                             <span class="copy-icon">📋</span>
                         </button>

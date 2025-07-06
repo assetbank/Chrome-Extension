@@ -143,15 +143,58 @@ body {
     word-break: break-all;
 }
 
+.url-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.url-header h3 {
+    margin: 0;
+}
+
+.filter-count {
+    font-size: 11px;
+    color: #6B7280;
+    font-style: italic;
+    background-color: #F3F4F6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
 .status-actions {
     margin-bottom: 20px;
 }
 
-.status-actions h3 {
-    font-size: 16px;
-    font-weight: 600;
+.status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 15px;
+}
+
+.status-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
     color: #031026;
+}
+
+.btn-clear {
+    background-color: #F9F9FA;
+    color: #6B7280;
+    border: 1px solid #E0E4EA;
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-clear:hover {
+    background-color: #F3F4F6;
+    color: #374151;
 }
 
 .status-buttons {
