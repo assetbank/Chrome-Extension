@@ -8,9 +8,17 @@
 </head>
 <body>
     <div class="container">
+        <button id="info-btn" class="info-btn" title="How to use">
+            <span class="info-icon">?</span>
+        </button>
+        <div id="info-tooltip" class="info-tooltip" style="display: none;">
+            <p>Apply any filter to generate a shareable URL. All filter types are supported except custom date ranges and custom resolution values.</p>
+        </div>
+        
         <header class="header">
-            <img src="bynder-logo-blue.svg" alt="Bynder Logo" class="logo">
-            <h1>Filter URL Generator</h1>
+            <a href="https://chromewebstore.google.com/detail/bynder-filter-url-generat/kmjbefjcflbegkomplljokogkjnfifhm?authuser=0&hl=en" target="_blank" class="logo-link">
+                <img src="icons/funnel-48.png" alt="Filter URL Generator Logo" class="logo">
+            </a>
         </header>
 
         <main class="content">
@@ -20,36 +28,15 @@
             </div>
 
             <div id="not-bynder" class="message" style="display: none;">
-                <p>⚠️ This extension only works on Bynder portal pages.</p>
-                <p>Navigate to your Bynder portal to use this extension.</p>
+                <p>⚠️ This extension only works in the asset bank of your Bynder portal.</p>
             </div>
 
             <div id="filters-detected" class="results" style="display: none;">
-                <div class="portal-info">
-                    <h3>Portal</h3>
-                    <p id="portal-url"></p>
-                </div>
+                
 
-                <div class="status-actions">
-                    <div class="status-header">
-                        <h3>Status Actions</h3>
-                        <button id="clear-status-btn" class="btn btn-clear" title="Clear all status actions">Clear All</button>
-                    </div>
-                    <div class="status-buttons">
-                        <button class="btn btn-status" data-field="isActive" data-value="true" title="Show only active assets">Active Assets</button>
-                        <button class="btn btn-status" data-field="archive" data-value="1" title="Show only archived assets">Archived</button>
-                        <button class="btn btn-status" data-field="isPublic" data-value="1" title="Show only public assets">Public</button>
-                        <button class="btn btn-status" data-field="isDownloadable" data-value="true" title="Show downloadable assets">Downloadable</button>
-                        <button class="btn btn-status" data-field="isDownloadable" data-value="false" title="Show non-downloadable assets">Non-Downloadable</button>
-                        <button class="btn btn-status" data-field="keyVisual" data-value="1" title="Show limited usage assets">Limited Usage</button>
-                        <button class="btn btn-status" data-field="audit" data-value="1" title="Show assets sent for review">Sent for Review</button>
-                        <button class="btn btn-status" data-field="watermark" data-value="1" title="Show watermarked assets">Watermarked</button>
-                    </div>
-                </div>
 
                 <div class="url-output">
                     <div class="url-header">
-                        <h3>Generated URL</h3>
                         <span id="filter-count" class="filter-count"></span>
                     </div>
                     <div class="url-container">
