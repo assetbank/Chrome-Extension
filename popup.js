@@ -7,24 +7,58 @@ class PopupManager {
             filterCount: document.getElementById('filter-count'),
             generatedUrl: document.getElementById('generated-url'),
             openBtn: document.getElementById('open-btn'),
-            copyBtn: document.getElementById('copy-btn')
+            copyBtn: document.getElementById('copy-btn'),
+            filterUrlToggle: document.getElementById('filter-url-toggle'),
+            filterUrlContent: document.getElementById('filter-url-content'),
+            predictableUrlSection: document.getElementById('predictable-url-section'),
+            predictableUrlToggle: document.getElementById('predictable-url-toggle'),
+            predictableUrlContent: document.getElementById('predictable-url-content'),
+            predictableUrl: document.getElementById('predictable-url'),
+            predictableFilterCount: document.getElementById('predictable-filter-count'),
+            predictableOpenBtn: document.getElementById('predictable-open-btn'),
+            predictableCopyBtn: document.getElementById('predictable-copy-btn')
         };
 
         this.currentPortalUrl = null;
         this.currentFilters = null;
+        this.filterUrlExpanded = true;
+        this.predictableUrlExpanded = false;
 
         this.init();
     }
 
     async init() {
         this.setupEventListeners();
+        await this.loadPreferences();
         // Don't load saved status actions - they should be tab-specific
         this.detectFilters();
+    }
+
+    async loadPreferences() {
+        try {
+            const result = await chrome.storage.local.get(['filterUrlExpanded', 'predictableUrlExpanded']);
+            if (result.filterUrlExpanded !== undefined) {
+                this.filterUrlExpanded = result.filterUrlExpanded;
+            }
+            if (result.predictableUrlExpanded !== undefined) {
+                this.predictableUrlExpanded = result.predictableUrlExpanded;
+            }
+        } catch (error) {
+            console.error('Error loading preferences:', error);
+        }
     }
 
     setupEventListeners() {
         this.elements.copyBtn.addEventListener('click', () => this.copyToClipboard());
         this.elements.openBtn.addEventListener('click', () => this.openUrl());
+        
+        // Predictable URL buttons
+        this.elements.predictableCopyBtn?.addEventListener('click', () => this.copyPredictableUrl());
+        this.elements.predictableOpenBtn?.addEventListener('click', () => this.openPredictableUrl());
+        
+        // Toggle buttons
+        this.elements.filterUrlToggle?.addEventListener('click', () => this.toggleFilterUrl());
+        this.elements.predictableUrlToggle?.addEventListener('click', () => this.togglePredictableUrl());
         
         // Setup info button
         const infoBtn = document.getElementById('info-btn');
@@ -120,6 +154,12 @@ class PopupManager {
 
         // Update the generated URL with all filters
         this.updateGeneratedUrl();
+        
+        // Update predictable URL (only if there are metaproperties)
+        this.updatePredictableUrl();
+        
+        // Apply saved toggle states
+        this.applyToggleStates();
     }
 
     
@@ -253,8 +293,102 @@ class PopupManager {
         }
     }
 
+    generatePredictableUrl(portalUrl, filters) {
+        // Only use metaproperties (options) for predictable URL
+        if (!filters.metaproperties || filters.metaproperties.length === 0) {
+            return `https://${portalUrl}/match/`;
+        }
+
+        let pathSegments = ['match'];
+        
+        // Add each metaproperty/option pair to the URL path
+        filters.metaproperties.forEach(meta => {
+            const propertyName = meta.rawProperty || meta.property;
+            // Encode the values to handle special characters and spaces
+            pathSegments.push(encodeURIComponent(propertyName));
+            pathSegments.push(encodeURIComponent(meta.value));
+        });
+
+        // Build the final URL with trailing slash
+        const predictableUrl = `https://${portalUrl}/${pathSegments.join('/')}/`;
+        return predictableUrl;
+    }
+
+    updatePredictableUrl() {
+        // Only show predictable URL section if there are metaproperties
+        if (this.currentFilters && this.currentFilters.metaproperties && this.currentFilters.metaproperties.length > 0) {
+            const predictableUrl = this.generatePredictableUrl(this.currentPortalUrl, this.currentFilters);
+            this.elements.predictableUrl.value = predictableUrl;
+            this.elements.predictableUrlSection.style.display = 'block';
+            
+            // Update the predictable filter count
+            const optionCount = this.currentFilters.metaproperties.length;
+            this.elements.predictableFilterCount.textContent = `${optionCount} option${optionCount === 1 ? '' : 's'}`;
+        } else {
+            this.elements.predictableUrlSection.style.display = 'none';
+            this.predictableUrlExpanded = false;
+        }
+    }
+
+    applyToggleStates() {
+        // Apply filter URL toggle state
+        if (!this.filterUrlExpanded) {
+            this.elements.filterUrlContent.style.display = 'none';
+            this.elements.filterUrlToggle.classList.add('collapsed');
+        } else {
+            this.elements.filterUrlContent.style.display = 'block';
+            this.elements.filterUrlToggle.classList.remove('collapsed');
+        }
+        
+        // Apply predictable URL toggle state
+        if (!this.predictableUrlExpanded) {
+            this.elements.predictableUrlContent.style.display = 'none';
+            this.elements.predictableUrlToggle.classList.add('collapsed');
+        } else {
+            this.elements.predictableUrlContent.style.display = 'block';
+            this.elements.predictableUrlToggle.classList.remove('collapsed');
+        }
+    }
+
+    toggleFilterUrl() {
+        this.filterUrlExpanded = !this.filterUrlExpanded;
+        
+        if (this.filterUrlExpanded) {
+            this.elements.filterUrlContent.style.display = 'block';
+            this.elements.filterUrlToggle.classList.remove('collapsed');
+        } else {
+            this.elements.filterUrlContent.style.display = 'none';
+            this.elements.filterUrlToggle.classList.add('collapsed');
+        }
+        
+        // Save the preference
+        chrome.storage.local.set({ filterUrlExpanded: this.filterUrlExpanded });
+    }
+
+    togglePredictableUrl() {
+        this.predictableUrlExpanded = !this.predictableUrlExpanded;
+        
+        if (this.predictableUrlExpanded) {
+            this.elements.predictableUrlContent.style.display = 'block';
+            this.elements.predictableUrlToggle.classList.remove('collapsed');
+        } else {
+            this.elements.predictableUrlContent.style.display = 'none';
+            this.elements.predictableUrlToggle.classList.add('collapsed');
+        }
+        
+        // Save the preference
+        chrome.storage.local.set({ predictableUrlExpanded: this.predictableUrlExpanded });
+    }
+
     openUrl() {
         const url = this.elements.generatedUrl.value;
+        if (url) {
+            chrome.tabs.create({ url: url });
+        }
+    }
+
+    openPredictableUrl() {
+        const url = this.elements.predictableUrl.value;
         if (url) {
             chrome.tabs.create({ url: url });
         }
@@ -275,6 +409,25 @@ class PopupManager {
         } catch (error) {
             console.error('Failed to copy:', error);
             this.elements.generatedUrl.select();
+            document.execCommand('copy');
+        }
+    }
+
+    async copyPredictableUrl() {
+        try {
+            await navigator.clipboard.writeText(this.elements.predictableUrl.value);
+            
+            const originalText = this.elements.predictableCopyBtn.innerHTML;
+            this.elements.predictableCopyBtn.innerHTML = '<span class="copy-icon">✓</span>';
+            this.elements.predictableCopyBtn.classList.add('copied');
+            
+            setTimeout(() => {
+                this.elements.predictableCopyBtn.innerHTML = originalText;
+                this.elements.predictableCopyBtn.classList.remove('copied');
+            }, 1500);
+        } catch (error) {
+            console.error('Failed to copy:', error);
+            this.elements.predictableUrl.select();
             document.execCommand('copy');
         }
     }

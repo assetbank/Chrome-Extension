@@ -12,7 +12,7 @@
             <span class="info-icon">?</span>
         </button>
         <div id="info-tooltip" class="info-tooltip" style="display: none;">
-            <p>Apply any filter to generate a shareable URL. All filter types are supported except custom date ranges and custom resolution values.</p>
+            <p>Apply any filter to generate a shareable URL. All filter types are supported except custom date ranges and custom resolution values. When using options, a predictable URL will also be generated.</p>
         </div>
         
         <header class="header">
@@ -37,16 +37,48 @@
 
                 <div class="url-output">
                     <div class="url-header">
-                        <span id="filter-count" class="filter-count"></span>
+                        <div class="header-left">
+                            <span class="url-label">Filter URL</span>
+                            <span id="filter-count" class="filter-count"></span>
+                        </div>
+                        <button class="header-toggle" id="filter-url-toggle" title="Toggle section">
+                            <span class="toggle-arrow">▼</span>
+                        </button>
                     </div>
-                    <div class="url-container">
-                        <input type="text" id="generated-url" readonly>
-                        <button id="open-btn" class="btn btn-copy" title="Open in new tab">
-                            <span class="open-icon">🔗</span>
+                    <div id="filter-url-content" class="url-content">
+                        <div class="url-container">
+                            <input type="text" id="generated-url" readonly>
+                            <button id="open-btn" class="btn btn-copy" title="Open in new tab">
+                                <span class="open-icon">🔗</span>
+                            </button>
+                            <button id="copy-btn" class="btn btn-copy" title="Copy to clipboard">
+                                <span class="copy-icon">📋</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="predictable-url-section" class="url-output" style="display: none;">
+                    <div class="url-header">
+                        <div class="header-left">
+                            <span class="url-label">Predictable URL</span>
+                            <span class="url-sublabel">(Options Only)</span>
+                            <span id="predictable-filter-count" class="filter-count"></span>
+                        </div>
+                        <button class="header-toggle" id="predictable-url-toggle" title="Toggle section">
+                            <span class="toggle-arrow">▼</span>
                         </button>
-                        <button id="copy-btn" class="btn btn-copy" title="Copy to clipboard">
-                            <span class="copy-icon">📋</span>
-                        </button>
+                    </div>
+                    <div id="predictable-url-content" class="url-content" style="display: none;">
+                        <div class="url-container">
+                            <input type="text" id="predictable-url" readonly>
+                            <button id="predictable-open-btn" class="btn btn-copy" title="Open in new tab">
+                                <span class="open-icon">🔗</span>
+                            </button>
+                            <button id="predictable-copy-btn" class="btn btn-copy" title="Copy to clipboard">
+                                <span class="copy-icon">📋</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 

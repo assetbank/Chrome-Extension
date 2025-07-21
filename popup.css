@@ -27,7 +27,7 @@ body {
 
 .header {
     background-color: #F7F8F9;
-    padding: 10px 30px 10px 30px;
+    padding: 10px 30px 30px 30px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -63,7 +63,7 @@ body {
 }
 
 .content {
-    padding: 15px 30px 30px 30px;
+    padding: 15px 30px 20px 30px;
     flex: 1;
 }
 
@@ -235,7 +235,50 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #E0E4EA;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #9CA3AF;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+}
+
+.header-toggle:hover {
+    background-color: #F3F4F6;
+    color: #6B7280;
+}
+
+.toggle-arrow {
+    display: inline-block;
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.header-toggle.collapsed .toggle-arrow {
+    transform: rotate(-90deg);
+}
+
+.url-content {
+    transition: all 0.2s ease;
+}
+
+.url-sublabel {
+    font-size: 11px;
+    color: #9CA3AF;
+    font-weight: normal;
 }
 
 .url-header h3 {
@@ -250,6 +293,7 @@ body {
     padding: 2px 6px;
     border-radius: 4px;
     display: inline-block;
+    margin-left: 4px;
 }
 
 .status-actions {
@@ -355,6 +399,16 @@ body {
     margin-bottom: 20px;
 }
 
+.url-output + .url-output {
+    margin-top: 15px;
+}
+
+.url-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #031026;
+}
+
 .url-output h3 {
     font-size: 16px;
     font-weight: 600;
@@ -368,7 +422,8 @@ body {
     align-items: stretch;
 }
 
-#generated-url {
+#generated-url,
+#predictable-url {
     flex: 1;
     padding: 10px 12px;
     border: 1px solid #E0E4EA;
@@ -382,7 +437,8 @@ body {
     user-select: text;
 }
 
-#generated-url:focus {
+#generated-url:focus,
+#predictable-url:focus {
     outline: none;
     border: 1px solid #000000;
 }
@@ -401,6 +457,7 @@ body {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
